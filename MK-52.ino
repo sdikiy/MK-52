@@ -30,13 +30,11 @@
  *    
  */
 
-///#define DEBUG   //закомментировать, если не нужна отладочная информация
 #include "MKCALC.h"
 #include <avr/interrupt.h>
 #include <SPI.h>
 #include <Arduino.h>
 
-//volatile boolean process_it;
 MKCALC mk52 = MKCALC();
 
 // SPI interrupt routine
@@ -49,83 +47,53 @@ void setup() {
   mk52.setSerial(&Serial);
   TIMSK0 = 0;
 
+  pinMode( 7, OUTPUT);      // pin PD7
   pinMode( 8, OUTPUT);      // pin PB0
   pinMode( 9, OUTPUT);      // pin PB1
-  //pinMode(12, OUTPUT);      // pin PB4
 
-  // have to send on master in, *slave out*
-  pinMode(MISO, OUTPUT);
-  SPCR |= _BV(CPOL);
-  SPCR |= _BV(CPHA);
-  // turn on SPI in slave mode
+  //SPI CONFIG
+  //Bit 6 – SPE0: SPI0 Enable. When the SPE bit is written to one, the SPI is enabled.
+  //SPCR |= (1<<SPE);
   SPCR |= _BV(SPE);
-  // turn on interrupts
+  //Bit 5 – DORD0: Data0 Order: one - the LSB, zero - the MSB
+  //SPCR &= ~(1<<DORD);
+  SPCR |= (1<<DORD);
+  //Bit 4 – MSTR0: Master/Slave0 Select
+  /* This bit selects Master SPI mode when written to one, and Slave SPI mode when written logic zero. If SS
+  is configured as an input and is driven low while MSTR is set, MSTR will be cleared, and SPIF in SPSR
+  will become set. The user will then have to set MSTR to re-enable SPI Master mode.*/
+  SPCR &= ~(1<<MSTR);
+  pinMode(MISO, OUTPUT);
+  //Bit 3 – CPOL0: 0 - Rising/Falling; 1 - Falling/Rising
+  SPCR |= _BV(CPOL);
+  //Bit 2 – CPHA0: 0 - Sample/Setup;   1 - Setup/Sample
+  SPCR |= _BV(CPHA);
+  //Bit 7 – SPIE0: SPI0 Interrupt Enable
   SPCR |= _BV(SPIE);
 
 }
 
 void loop() {
-/*
-  switch (*mk52.cmd_state) { 
-    case WAIT_A_START:
-      //Serial.print(".");
-      break;
-    case WAIT_A_MARK:
-      //Serial.print("+");
-      break;
-    case READ_BITS:
-      //Serial.println("READ_BITS");
-      break;
-  }
-*/
   if (Serial.available() > 0) {
     switch (Serial.read()) {
       case '1':
         Serial.println("ArduinoNano");
         Serial.print("cmd_state ");
-        Serial.println((mk52.getState() + 9)%3);
-        Serial.println(mk52.getState());
+        Serial.println(mk52.cmd_state);
         break;
       case '2':
-        Serial.println("SPI //SS = 1");
+        Serial.println("set SPI /SS = 1");
         mk52.commandT = 1;
         break;
+      case '3':
+        mk52.byteToMk = ((mk52.byteToMk == 0x55) ? (0xAA) : (0x55));
+        mk52.byteWriteToMkStatus = 1;
+        break;
       case 'r':
-        mk52.setState(WAIT_A_START);
+        mk52.cmd_state = WAIT_A_START;
         break;
       case 's':
-        mk52.clrInterrupt();
         mk52.MemoryPagesPrint();
-        break;
-      case 'm':
-        mk52.clrInterrupt();
-        mk52.MemoryPagesPrint();
-        mk52.setInterrupt();
-        mk52.setState(WAIT_A_START);
-        break;
-      case 'd':
-        Serial.println("ringToMem - start");
-        mk52.ringToMem();
-        mk52.MemoryPagesPrint();
-        Serial.println("\r\nringToMem - stop");
-        break;
-      case 'f':
-        Serial.println("ringToMemNoInterrupt - start");
-        mk52.ringToMemNoInterrupt();
-        mk52.MemoryPagesPrint();
-        Serial.println("\r\nringToMemNoInterrupt - stop");
-        break;
-      case 'u':
-        PORTD |= (1 << 2);
-        PORTD |= (1 << 3);
-        PORTD |= (1 << 4);
-        Serial.println("\r\nON  pull-up");
-        break;
-      case 'i':
-        PORTD &= ~(1 << 2);
-        PORTD &= ~(1 << 3);
-        PORTD &= ~(1 << 4);
-        Serial.println("\r\nOFF pull-up");
         break;
     }
   }   
