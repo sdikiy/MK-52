@@ -25,7 +25,7 @@ class MKCALC {
 
     static volatile byte cmd_state;  //начальное состояние программы
     static volatile uint16_t posRAM;
-    static volatile uint8_t commandT;
+    static volatile uint8_t skipClockCycle;
     static volatile uint8_t tempOut;
     static volatile uint8_t byteWriteToMkStatus;
     static volatile uint8_t byteToMk;

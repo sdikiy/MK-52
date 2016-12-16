@@ -11,7 +11,7 @@
 volatile byte MKCALC::cmd_state = WAIT_A_START;
 volatile uint8_t MKCALC::RAMdata[315];
 volatile uint16_t MKCALC::posRAM = 0;
-volatile uint8_t MKCALC::commandT = 0;
+volatile uint8_t MKCALC::skipClockCycle = 0;
 volatile uint8_t MKCALC::tempOut = 0;
 volatile uint8_t MKCALC::byteWriteToMkStatus = 0;
 volatile uint8_t MKCALC::byteToMk = 0xAA;
@@ -29,7 +29,7 @@ void MKCALC::setSerial(HardwareSerial* serial) {
 
 byte MKCALC::readTetrad(int index) {
   byte tetrad = 0;
-  // See - Arduino/hardware/tools/avr/avr/include/avr/builtins.h
+  //See: Arduino/hardware/tools/avr/avr/include/avr/builtins.h
   tetrad = ((index & 0x01) == 1) ? (RAMdata[index >> 1]) : (__builtin_avr_swap(RAMdata[index >> 1]));
   tetrad = tetrad & 0x0F;
   //tetrad = ((tetrad & 0x01) << 3) | ((tetrad & 0x02) << 1) | ((tetrad & 0x04) >> 1) | ((tetrad & 0x08) >> 3);
@@ -37,14 +37,14 @@ byte MKCALC::readTetrad(int index) {
 }
 
 void MKCALC::interruptSPI() {
-  SPDR = __builtin_avr_swap( (posRAM == 314) ? (RAMdata[0]) : (RAMdata[posRAM + 1])); //Set data to send
+  SPDR = __builtin_avr_swap( (posRAM == 314) ? (RAMdata[0]) : (RAMdata[posRAM + 1])); //Set data to send by SPI
   byte c = __builtin_avr_swap(~SPDR);  //read from SPI Data Register (double buffered)
-  if (posRAM == 0) PORTB |= (1 << 0); //oscill triger start
+  if (posRAM == 0) PORTB |= (1 << 0); //oscilloscope trigger start
 
   
-  PORTD |= (1 << 7);
+  PORTD |= (1 << 7); //write to MK OFF
   if ((posRAM == (byteNumToMk - 1)) && (cmd_state == READ_BITS) && (byteWriteToMkStatus == 2)) {
-    PORTD &= ~(1 << 7);
+    PORTD &= ~(1 << 7); //write to MK ON
     byteWriteToMkStatus = 0;
   }
   if ((posRAM == byteNumToMk) && (cmd_state == READ_BITS) && (byteWriteToMkStatus == 1)) {
@@ -64,18 +64,18 @@ void MKCALC::interruptSPI() {
       cmd_state = READ_BITS;
     } else {
       cmd_state = WAIT_A_START;
-      commandT = 1;
+      skipClockCycle = 1;
     }
   }
 
-  if (commandT == 1) {
-    PORTB |= (1 << 1);
-    commandT = 0;
+  if (skipClockCycle == 1) { //skip one clock cycle
+    PORTB |= (1 << 1); 
+    skipClockCycle = 0;
     NOP5; NOP5; NOP5; NOP5;
     PORTB &= ~(1 << 1);
   }
 
-  PORTB &= ~(1 << 0); //oscill triger end
+  PORTB &= ~(1 << 0); //oscilloscope trigger end
 }
 
 //вывод всех страниц памяти в виде тетрад в HEX виде

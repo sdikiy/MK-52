@@ -40,16 +40,17 @@ MKCALC mk52 = MKCALC();
 // SPI interrupt routine
 ISR(SPI_STC_vect) {
   mk52.interruptSPI();
-}  // end of interrupt routine SPI_STC_vect
+}
 
 void setup() {
+  PORTD |= (1 << 7);        //write to MK OFF
+  pinMode( 7, OUTPUT);      // pin PD7 - allow write to MK ON/OFF
+  pinMode( 8, OUTPUT);      // pin PB0 - oscilloscope trigger, used for debug
+  pinMode( 9, OUTPUT);      // pin PB1 - wired to pin /ss of SPI
+
   Serial.begin(115200, SERIAL_8N1);
   mk52.setSerial(&Serial);
   TIMSK0 = 0;
-
-  pinMode( 7, OUTPUT);      // pin PD7
-  pinMode( 8, OUTPUT);      // pin PB0
-  pinMode( 9, OUTPUT);      // pin PB1
 
   //SPI CONFIG
   //Bit 6 – SPE0: SPI0 Enable. When the SPE bit is written to one, the SPI is enabled.
@@ -83,7 +84,7 @@ void loop() {
         break;
       case '2':
         Serial.println("set SPI /SS = 1");
-        mk52.commandT = 1;
+        mk52.skipClockCycle = 1;
         break;
       case '3':
         mk52.byteToMk = ((mk52.byteToMk == 0x55) ? (0xAA) : (0x55));
