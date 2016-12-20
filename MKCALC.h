@@ -11,9 +11,9 @@
 #include "Arduino.h"
 #include "HardwareSerial.h"
 
-#define WAIT_A_START  0  //ожидание синхроимпульса для старта
-#define WAIT_A_MARK   1  //ожидание сигнала "метка"
-#define READ_BITS     2  //чтение битов из ОЗУ калькулятора
+#define WAIT_A_START  0
+#define WAIT_A_MARK   1
+#define READ_BITS     2
 
 #define NOP5 __asm__ __volatile__ ("nop\n\tnop\n\tnop\n\tnop\n\tnop\n\t")
 
@@ -21,9 +21,11 @@ class MKCALC {
   public:
     MKCALC();
     void setSerial(HardwareSerial* serial);
-    void MemoryPagesPrint();  //вывод всех страниц памяти в виде тетрад в HEX виде
+    void MemoryPagesPrint();
+    void WriteRamToRom();
+    void WriteRamToMK();
 
-    static volatile byte cmd_state;  //начальное состояние программы
+    static volatile byte cmd_state;
     static volatile uint16_t posRAM;
     static volatile uint8_t skipClockCycle;
     static volatile uint8_t tempOut;
@@ -36,8 +38,9 @@ class MKCALC {
     HardwareSerial* serial_;
 
   private:
-    static byte readTetrad(int index);    //функция для чтения тетрады из смассива ОП   //index - номер терады
-    static volatile uint8_t RAMdata[315]; // 2520/8 = 315 массив для хранения всей ОП 
+    static byte readTetrad(uint16_t ind, volatile uint8_t* memDump);
+    static volatile uint8_t RAMdata[315];
+    static volatile uint8_t fixCounter;
     volatile byte Timsk0_temp;
 };
 
