@@ -35,6 +35,16 @@ byte MKCALC::readTetrad(uint16_t ind, volatile uint8_t* memDump) {
   return 0x0F & (((ind & 0x01) == 1) ? (memDump[ind >> 1]) : (__builtin_avr_swap(memDump[ind >> 1])));
 }
 
+//TODO setTetrad(0x0F, 24 * 3 + 1, MyTestMemDump)
+void MKCALC::setTetrad(uint8_t val, uint16_t ind, volatile uint8_t* memDump) {
+  if ((ind & 0x01) == 1) {
+    //0x0F & (memDump[ind >> 1]) - from readTetrad
+    memDump[ind >> 1] = ((0xF0 & (memDump[ind >> 1])) | (0x0F & val));
+  } else {
+    memDump[ind >> 1] = ((0x0F & (memDump[ind >> 1])) | (0xF0 & (val << 4)));
+  }
+}
+
 #define TOREALIND(indRAM) ((indRAM >= 315) ? (indRAM - 315) : (indRAM))
 void MKCALC::interruptSPI() {
   PORTD |= (1 << 6);

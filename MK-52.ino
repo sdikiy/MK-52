@@ -89,6 +89,28 @@ void loop() {
   
   if (!(mk52.commandQ.out == mk52.commandQ.in)) {
     mk52.commandQ.in = (mk52.commandQ.in + 1) & 0x0F;
-    Serial.println(mk52.commandQ.command[mk52.commandQ.in], HEX);
+    switch (mk52.commandQ.command[mk52.commandQ.in]) {
+      case 0x27: // "K","-" MK => EEPROM
+        //Copy MK memory to RAM
+        for (uint16_t i = 0; i < 315; i++) MyTestMemDump[i] = mk52.RAMdata[i];
+        //TODO setTetrad(0x0F, 24 * 3 + 1, MyTestMemDump) - looks like "DONE" for CPU
+        mk52.setTetrad(0x0F, (24 * 3 + 1), MyTestMemDump);
+        //Copy RAM to EEPROM
+        for (uint16_t i = 0; i < 315; i++) EEPROM.update(i, MyTestMemDump[i]);
+        //Copy RAM to MK memory
+        mk52.dumpToMk = MyTestMemDump;
+        mk52.dumpWriteToMkStatus = INIT_WRITE;
+        break;
+      case 0x29: // "K","/" EEPROM => MK
+        //Copy EEPROM to RAM
+        for (uint16_t i = 0; i < 315; i++) MyTestMemDump[i] = EEPROM.read(i);
+        //Copy RAM to MK memory
+        mk52.dumpToMk = MyTestMemDump;
+        mk52.dumpWriteToMkStatus = INIT_WRITE;
+        break;
+      default:
+        Serial.print(" commandQ.command[commandQ.in] - ");
+        Serial.println(mk52.commandQ.command[mk52.commandQ.in], HEX);
+    }
   }
 }

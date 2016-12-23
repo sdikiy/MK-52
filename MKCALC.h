@@ -38,6 +38,7 @@ class MKCALC {
     void MemoryPagesPrint(volatile uint8_t* memDump);
     void WriteRamToRom(uint8_t* memDump);
     void WriteRamToMK(uint8_t* memDump);
+    void setTetrad(uint8_t val, uint16_t ind, volatile uint8_t* memDump);
 
     //static volatile byte cmd_state;
     static volatile readStateType readState;
