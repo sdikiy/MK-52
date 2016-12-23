@@ -2,7 +2,9 @@
 #include <avr/interrupt.h>
 #include <SPI.h>
 #include <Arduino.h>
+#include <EEPROM.h>
 
+uint8_t MyTestMemDump[315];
 MKCALC mk52 = MKCALC();
 
 // SPI interrupt routine
@@ -53,23 +55,40 @@ void loop() {
     switch (Serial.read()) {
       case '1':
         Serial.println("ArduinoNano");
-        Serial.print("cmd_state ");
-        Serial.println(mk52.cmd_state);
+        Serial.print("readState ");
+        Serial.println(mk52.readState);
         break;
       case '2':
         Serial.println("set SPI /SS = 1");
         mk52.skipClockCycle = 1;
         break;
-      case '3':
-        mk52.byteToMk = ((mk52.byteToMk == 0x55) ? (0xAA) : (0x55));
-        mk52.byteWriteToMkStatus = 1;
-        break;
       case 'r':
-        mk52.cmd_state = WAIT_A_START;
+        mk52.readState = WAIT_A_START;
         break;
       case 's':
-        mk52.MemoryPagesPrint();
+        mk52.MemoryPagesPrint(mk52.RAMdata);
+        break;
+      case 'd':
+        mk52.MemoryPagesPrint(MyTestMemDump);
+        break;
+      case 'c': //Copy MK memory to RAM
+        for (uint16_t i = 0; i < 315; i++) MyTestMemDump[i] = mk52.RAMdata[i];
+        break;
+      case 'w': //Copy RAM to MK memory
+        mk52.dumpToMk = MyTestMemDump;
+        mk52.dumpWriteToMkStatus = INIT_WRITE;
+        break;
+      case 'e': //Copy RAM to EEPROM
+        for (uint16_t i = 0; i < 315; i++) EEPROM.update(i, MyTestMemDump[i]);
+        break;
+      case 'q': //Copy EEPROM to RAM
+        for (uint16_t i = 0; i < 315; i++) MyTestMemDump[i] = EEPROM.read(i);
         break;
     }
-  }   
+  }
+  
+  if (!(mk52.commandQ.out == mk52.commandQ.in)) {
+    mk52.commandQ.in = (mk52.commandQ.in + 1) & 0x0F;
+    Serial.println(mk52.commandQ.command[mk52.commandQ.in], HEX);
+  }
 }
